@@ -1,0 +1,11 @@
+# Compiled
+*.o
+*.obj
+
+# Executables
+*.exe
+*.out
+
+# Misc
+archive/
+.clang-format
