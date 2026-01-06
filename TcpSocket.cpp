@@ -33,7 +33,7 @@ void TcpSocket::send(const std::string& msg, int flags) {
 
   const char* data = msg.data();
   size_t total = msg.size();
-  size_t sent = 0;
+  size_t sent{0};
 
   while (sent < total) {
     ssize_t n = ::send(m_fd, data + sent, total - sent, flags);
@@ -58,13 +58,13 @@ void TcpSocket::send(const std::string& msg, int flags) {
   }
 }
 
-size_t TcpSocket::recv(void* buffer, size_t len) {
+size_t TcpSocket::recv(void* buffer, size_t len, int flags) {
   if (m_fd == -1) {
     throw std::logic_error("recv() called on invalid/moved socket");
   }
 
   while (true) {
-    ssize_t n = ::recv(m_fd, buffer, len, 0);
+    ssize_t n = ::recv(m_fd, buffer, len, flags);
 
     if (n > 0) {
       return static_cast<size_t>(n);

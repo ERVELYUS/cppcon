@@ -14,6 +14,6 @@ class TcpSocket : public BaseSocket {
   TcpSocket();
 
   void connect(const AddrInfoResolver::Endpoint& endpoint);
-  void send(const std::string& msg, int flags);
-  size_t recv(void* buffer, size_t len);
+  void send(const std::string& msg, int flags = 0);
+  size_t recv(void* buffer, size_t len, int flags = 0);
 };
