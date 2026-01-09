@@ -6,8 +6,6 @@
 
 class TcpSocket : public BaseSocket {
   friend class TcpListener;
-
- private:
   explicit TcpSocket(int fd) : BaseSocket(fd) {}
 
  public:
