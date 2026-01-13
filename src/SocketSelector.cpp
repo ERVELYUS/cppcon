@@ -1,4 +1,4 @@
-#include "SocketSelector.h"
+#include <cppcon/SocketSelector.h>
 
 void SocketSelector::add(const BaseSocket& socket, const short mode) {
   if (socket.get_fd() == -1) {

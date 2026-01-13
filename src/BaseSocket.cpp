@@ -1,5 +1,4 @@
-#include "BaseSocket.h"
-
+#include <cppcon/BaseSocket.h>
 #include <fcntl.h>
 
 #include <stdexcept>
@@ -55,13 +54,3 @@ void BaseSocket::set_non_blocking(bool non_blocking) {
 }
 
 int BaseSocket::get_fd() const { return m_fd; }
-
-template <typename T>
-void BaseSocket::set_option(int level, int option_name, T option_value) {
-  if (m_fd == -1)
-    throw std::logic_error("set_option() called on invalid/moved socket");
-
-  if (setsockopt(m_fd, level, option_name, &option_value, sizeof(T)) < 0) {
-    throw std::runtime_error("setsockopt failed");
-  }
-}

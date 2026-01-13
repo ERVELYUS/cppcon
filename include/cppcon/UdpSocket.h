@@ -1,7 +1,7 @@
 #pragma once
 
-#include "AddrInfoResolver.h"
-#include "BaseSocket.h"
+#include <cppcon/AddrInfoResolver.h>
+#include <cppcon/BaseSocket.h>
 
 class UdpSocket : public BaseSocket {
  public:

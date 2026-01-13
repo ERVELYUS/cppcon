@@ -1,0 +1,10 @@
+BasedOnStyle: Google
+
+BreakBeforeBraces: Custom
+BraceWrapping:
+  BeforeElse: true
+  AfterFunction: false
+  AfterClass: false
+  AfterNamespace: false
+  AfterControlStatement: false
+  BeforeCatch: true 

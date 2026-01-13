@@ -1,10 +1,9 @@
-#include "TcpSocket.h"
+#include <cppcon/AddrInfoResolver.h>
+#include <cppcon/TcpSocket.h>
 
 #include <cerrno>
 #include <stdexcept>
 #include <system_error>
-
-#include "AddrInfoResolver.h"
 
 TcpSocket::TcpSocket() : BaseSocket(AF_INET, SOCK_STREAM, 0) {}
 

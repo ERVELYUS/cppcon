@@ -1,4 +1,4 @@
-#include "TcpListener.h"
+#include <cppcon/TcpListener.h>
 
 TcpListener::TcpListener() : BaseSocket(AF_INET, SOCK_STREAM, 0) {
   int opt = 1;
@@ -41,7 +41,8 @@ TcpSocket TcpListener::accept() {
   } while (client_fd == -1 && errno == EINTR);
 
   if (client_fd < 0) {
-    throw std::runtime_error("Failed to accept connection" + std::string(std::strerror(errno)));
+    throw std::runtime_error("Failed to accept connection" +
+                             std::string(std::strerror(errno)));
   }
 
   return TcpSocket(client_fd);

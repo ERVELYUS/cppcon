@@ -1,8 +1,8 @@
 #pragma once
-#include <string>
+#include <cppcon/AddrInfoResolver.h>
+#include <cppcon/BaseSocket.h>
 
-#include "AddrInfoResolver.h"
-#include "BaseSocket.h"
+#include <string>
 
 class TcpSocket : public BaseSocket {
   friend class TcpListener;

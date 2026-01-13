@@ -1,4 +1,4 @@
-#include "AddrInfoResolver.h"
+#include <cppcon/AddrInfoResolver.h>
 
 #include <cstring>
 #include <memory>

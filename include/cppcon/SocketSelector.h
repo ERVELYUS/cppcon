@@ -1,8 +1,7 @@
 #pragma once
+#include <cppcon/AddrInfoResolver.h>
+#include <cppcon/BaseSocket.h>
 #include <poll.h>
-
-#include "AddrInfoResolver.h"
-#include "BaseSocket.h"
 
 class SocketSelector {
   std::vector<struct pollfd> m_poll_fds{};

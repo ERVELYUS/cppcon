@@ -1,9 +1,9 @@
 #pragma once
-#include <cstring>
+#include <cppcon/AddrInfoResolver.h>
+#include <cppcon/BaseSocket.h>
+#include <cppcon/TcpSocket.h>
 
-#include "AddrInfoResolver.h"
-#include "BaseSocket.h"
-#include "TcpSocket.h"
+#include <cstring>
 
 class TcpListener : public BaseSocket {
  public:
