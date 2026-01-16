@@ -44,3 +44,10 @@ Packet& Packet::operator>>(std::string& data) {
 
   return *this;
 }
+
+void Packet::resize(size_t size) {
+  m_data.resize(size);
+  m_read_pos = 0;
+}
+
+std::uint8_t* Packet::buffer() { return m_data.data(); }

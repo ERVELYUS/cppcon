@@ -1,5 +1,7 @@
 #include <cppcon/UdpSocket.h>
 
+#include <cerrno>
+#include <stdexcept>
 #include <system_error>
 
 UdpSocket::UdpSocket() : BaseSocket(AF_INET, SOCK_DGRAM, 0) {}
@@ -61,5 +63,61 @@ size_t UdpSocket::recv_from(void* buffer, size_t len,
       }
       throw std::system_error(errno, std::system_category(), "recv_from()");
     }
+  }
+}
+
+void UdpSocket::send_to(const Packet& packet,
+                        const AddrInfoResolver::Endpoint& endpoint, int flags) {
+  if (m_fd == -1)
+    throw std::logic_error("send_to() called on invalid/moved socket");
+
+  const void* data = packet.get_data();
+  size_t size = packet.get_size();
+
+  ssize_t n{};
+  do {
+    n = ::sendto(m_fd, data, size, flags,
+                 reinterpret_cast<const sockaddr*>(&endpoint.addr),
+                 endpoint.addr_len);
+  } while (n == -1 && errno == EINTR);
+
+  if (n == -1) {
+    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      throw std::runtime_error("UDP send buffer full");
+    }
+    throw std::system_error(errno, std::system_category(), "sendto()");
+  }
+}
+
+size_t UdpSocket::recv_from(Packet& packet,
+                            AddrInfoResolver::Endpoint& endpoint, int flags) {
+  if (m_fd == -1)
+    throw std::logic_error("recv_from() called on invalid/moved socket");
+
+  constexpr std::uint16_t BIGGEST_POSSIBLE_PACKET{65535};
+  packet.resize(BIGGEST_POSSIBLE_PACKET);
+
+  endpoint.addr_len = sizeof(endpoint.addr);
+  ssize_t n{};
+
+  do {
+    n = ::recvfrom(m_fd, packet.buffer(), packet.get_size(), flags,
+                   reinterpret_cast<struct sockaddr*>(&endpoint.addr),
+                   &endpoint.addr_len);
+  } while (n == -1 || errno == EINTR);
+
+  if (n > 0) {
+    packet.resize(static_cast<size_t>(n));
+    return static_cast<size_t>(n);
+  }
+  else if (n == 0) {
+    packet.resize(0);
+    return 0;
+  }
+  else {
+    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      throw std::runtime_error("No data available");
+    }
+    throw std::system_error(errno, std::system_category(), "recvfrom()");
   }
 }

@@ -65,4 +65,7 @@ class Packet {
   }
 
   Packet& operator>>(std::string& data);
+
+  void resize(size_t size);
+  std::uint8_t* buffer();
 };
