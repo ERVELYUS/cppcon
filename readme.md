@@ -2,8 +2,6 @@
 
 A lightweight, high-performance C++17 networking library providing an object-oriented wrapper around Linux Sockets. This engine handles the complexities of **Endianness**, **TCP Byte-Streaming** and **Socket Multiplexing**, allowing you to focus on application logic.
 
----
-
 ## Features
 
 * **TCP & UDP Support**: Full abstraction for both connection-oriented and connectionless protocols.
@@ -12,8 +10,6 @@ A lightweight, high-performance C++17 networking library providing an object-ori
 * **Socket Selector**: Multiplexing support via `poll()` to handle multiple of concurrent connections in a single thread.
 * **Modern C++ Design**: Uses RAII for socket resource management and exception-based error handling.
 
----
-
 ## Architecture
 
 The engine is divided into three logical layers:
@@ -21,8 +17,6 @@ The engine is divided into three logical layers:
 1.  **The Transport Layer (`TcpSocket`, `UdpSocket`)**: Handles the raw transmission of bytes and error checking.
 2.  **The Presentation Layer (`Packet`)**: Transforms high-level C++ data into "Network Order" byte buffers.
 3.  **The Management Layer (`TcpListener`, `SocketSelector`)**: Handles incoming connections and event monitoring.
-
----
 
 ## Getting Started
 
@@ -43,8 +37,6 @@ mkdir build && cd build
 cmake ..
 make
 ```
-
----
 
 # Usage Example
 
@@ -70,8 +62,6 @@ if (socket.recv(packet)) {
     // Process your logic
 }
 ```
-
----
 
 # Testing
 
