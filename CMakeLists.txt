@@ -17,9 +17,7 @@ set(SOURCE_FILES
 )
 
 add_library(cppcon ${SOURCE_FILES})
+target_include_directories(cppcon PUBLIC include)
 
-target_include_directories(cppcon PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-add_executable(test packet_test.cpp)
-
-target_link_libraries(test PRIVATE cppcon)
+add_executable(stress_test examples/stress_test.cpp)
+target_link_libraries(stress_test PRIVATE cppcon)

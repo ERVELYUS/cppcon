@@ -3,8 +3,6 @@
 #include <cppcon/BaseSocket.h>
 #include <cppcon/TcpSocket.h>
 
-#include <cstring>
-
 class TcpListener : public BaseSocket {
  public:
   TcpListener();
