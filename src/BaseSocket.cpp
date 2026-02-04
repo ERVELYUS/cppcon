@@ -10,12 +10,14 @@ BaseSocket::BaseSocket(int family, int type, int protocol)
   }
 }
 
-BaseSocket::~BaseSocket() {
-  if (m_fd != 1) {
+void BaseSocket::close() {
+  if (m_fd != -1) {
     ::close(m_fd);
     m_fd = -1;
   }
 }
+
+BaseSocket::~BaseSocket() { this->close(); }
 
 BaseSocket::BaseSocket(BaseSocket&& other) noexcept : m_fd(other.m_fd) {
   other.m_fd = -1;

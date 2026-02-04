@@ -14,6 +14,7 @@ class BaseSocket {
   explicit BaseSocket(int fd) : m_fd(fd) {}
 
  public:
+  void close();
   virtual ~BaseSocket();
 
   BaseSocket(const BaseSocket& socket) = delete;
