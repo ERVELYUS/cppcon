@@ -1,18 +1,6 @@
 #pragma once
 
-#ifdef _WIN32
-#include <winsock2.h>
-#else
-#include <arpa/inet.h>
-#endif
-
-#ifndef htobe16
-#define htobe16(x) htons(x)
-#define htobe32(x) htonl(x)
-#define be16toh(x) ntohs(x)
-#define be32toh(x) ntohl(x)
-#endif
-
+#include "UniversalTypes.h"
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
