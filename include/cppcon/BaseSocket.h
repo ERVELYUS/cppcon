@@ -2,29 +2,7 @@
 
 #include <cppcon/AddrInfoResolver.h>
 
-#ifdef _WIN32
-#include <winsock2.h>
-#include <ws2tcpip.h>
-#else
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <netdb.h>  // For addrinfo
-#include <poll.h>
-#include <sys/socket.h>
-#include <unistd.h>  // For close()
-#endif
-
 #include <stdexcept>
-
-#ifdef _WIN32
-using socket_t = SOCKET;
-using socklen_t = int;
-#define IS_INVALID(s) (s == INVALID_SOCKET)
-#else
-using socket_t = int;
-#define IS_INVALID(s) (s < 0)
-#define INVALID_SOCKET -1
-#endif
 
 class BaseSocket {
  protected:

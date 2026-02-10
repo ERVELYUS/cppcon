@@ -17,7 +17,7 @@ set(SOURCE_FILES
 )
 
 add_library(cppcon ${SOURCE_FILES})
-target_include_directories(cppcon PUBLIC include)
+include_directories(cppcon PUBLIC include)
 
 add_executable(stress_test examples/stress_test.cpp)
 target_link_libraries(stress_test PRIVATE cppcon)

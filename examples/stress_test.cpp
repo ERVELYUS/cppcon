@@ -123,7 +123,7 @@ void run_client() {
     // 2. Send Hello
     Packet p1;
     p1 << static_cast<uint32_t>(CommandID::CMD_HELLO)
-       << std::string("Client v1.0");
+       << std::string("Client v1.1");
     socket.send(p1);
 
     // 3. Burst

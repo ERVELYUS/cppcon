@@ -138,7 +138,7 @@ bool TcpSocket::recv_all(void* buffer, size_t len, int flags) {
 
   while (total_received < len) {
     ssize_t bytes =
-        ::recv(m_fd, start + total_received, len - total_received, flags);
+        ::recv(m_fd, start + total_received, static_cast<int>(len - total_received), flags);
 
     if (bytes == 0) return false;  // Connection terminated
     if (bytes < 0) {
