@@ -21,3 +21,7 @@ target_include_directories(cppcon PUBLIC include)
 
 add_executable(stress_test examples/stress_test.cpp)
 target_link_libraries(stress_test PRIVATE cppcon)
+
+if(WIN32)
+  target_link_libraries(cppcon PUBLIC Ws2_32)
+endif()
