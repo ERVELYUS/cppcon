@@ -39,11 +39,9 @@ BaseSocket::BaseSocket(BaseSocket&& other) noexcept : m_fd(other.m_fd) {
 
 BaseSocket& BaseSocket::operator=(BaseSocket&& other) noexcept {
   if (this != &other) {
-    if (m_fd != -1) {
-      ::close(m_fd);
-    }
+    this->close();
     m_fd = other.m_fd;
-    other.m_fd = -1;
+    other.m_fd = INVALID_SOCKET;
   }
   return *this;
 }

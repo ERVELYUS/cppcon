@@ -46,7 +46,7 @@ std::vector<AddrInfoResolver::Endpoint> AddrInfoResolver::resolve(
     ep.socktype = p->ai_socktype;
     ep.protocol = p->ai_protocol;
     ep.addr_len = static_cast<socklen_t>(p->ai_addrlen);
-    std::memcpy(&ep.addr, p->ai_addr, p->ai_addrlen);
+    std::memcpy(&ep.addr, p->ai_addr, static_cast<size_t>(p->ai_addrlen));
 
     results.push_back(ep);
   }

@@ -3,16 +3,11 @@
 #include <algorithm>
 
 void SocketSelector::add(const BaseSocket& socket, const short mode) {
-  if (socket.get_fd() == -1) {
-    throw std::logic_error(
-        "SocketSelector: attempted to add invalid/moved socket");
+  if (IS_INVALID(socket.get_fd())) {
+    throw std::logic_error("SocketSelector: invalid socket");
   }
 
-#ifdef _WIN32
-  m_poll_fds.push_back({(SOCKET)socket.get_fd(), mode, 0});
-#else
-  m_poll_fds.push_back({socket.get_fd(), mode, 0});
-#endif
+  m_poll_fds.push_back({static_cast<socket_t>(socket.get_fd()), mode, 0});
 }
 
 void SocketSelector::remove(const BaseSocket& socket) {
@@ -26,18 +21,24 @@ void SocketSelector::remove(const BaseSocket& socket) {
 }
 
 void SocketSelector::wait(int timeout) {
-  if (::poll(m_poll_fds.data(), m_poll_fds.size(), timeout) < 0) {
+  if (m_poll_fds.empty()) return;
+
+#ifdef _WIN32
+  ULONG nfds = static_cast<ULONG>(m_poll_fds.size());
+#else
+  nfds_t nfds = static_cast<nfds_t>(m_poll_fds.size());
+#endif
+
+  if (::poll(m_poll_fds.data(), nfds, timeout) < 0) {
     throw std::runtime_error("poll() failed");
   }
 }
 
 bool SocketSelector::is_ready(const BaseSocket& socket) {
+  socket_t target_fd = socket.get_fd();
   for (const auto& pfd : m_poll_fds) {
-    if (pfd.fd == socket.get_fd()) {
-      if (pfd.revents & (pfd.events | POLLERR | POLLHUP)) {
-        return true;
-      }
-      return false;
+    if (pfd.fd == target_fd) {
+      return (pfd.revents & (POLLIN | POLLOUT | POLLERR | POLLHUP));
     }
   }
   return false;

@@ -51,7 +51,8 @@ void TcpSocket::send(const std::string& msg, int flags) {
   size_t sent{0};
 
   while (sent < total) {
-    ssize_t n = ::send(m_fd, data + sent, total - sent, flags);
+    ssize_t n =
+        ::send(m_fd, data + sent, static_cast<int>(total - sent), flags);
 
     if (n > 0) {
       sent += static_cast<size_t>(n);
@@ -106,7 +107,8 @@ void TcpSocket::send_all(const void* data, size_t len, int flags) {
   size_t total_sent{0};
 
   while (total_sent < len) {
-    ssize_t bytes = ::send(m_fd, start + total_sent, len - total_sent, flags);
+    ssize_t bytes = ::send(m_fd, start + total_sent,
+                           static_cast<int>(len - total_sent), flags);
 
     if (bytes == -1) {
       if (LAST_ERROR == ERR_INTR) continue;

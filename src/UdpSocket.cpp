@@ -34,9 +34,10 @@ void UdpSocket::send_to(const std::string& msg,
                         const AddrInfoResolver::Endpoint& endpoint, int flags) {
   if (IS_INVALID(m_fd)) throw std::logic_error("Invalid socket");
 
-  ssize_t n;
+  ssize_t n{};
   do {
-    n = ::sendto(m_fd, msg.data(), msg.size(), flags,
+    n = ::sendto(m_fd, static_cast<const char*>(msg.data()),
+                 static_cast<int>(msg.size()), flags,
                  reinterpret_cast<const sockaddr*>(&endpoint.addr),
                  endpoint.addr_len);
   } while (n == -1 && LAST_ERROR == ERR_INTR);
@@ -57,9 +58,9 @@ size_t UdpSocket::recv_from(void* buffer, size_t len,
 
   endpoint.addr_len = sizeof(endpoint.addr);
   while (true) {
-    ssize_t n = ::recvfrom(m_fd, buffer, len, flags,
-                           reinterpret_cast<struct sockaddr*>(&endpoint.addr),
-                           &endpoint.addr_len);
+    ssize_t n = ::recvfrom(
+        m_fd, static_cast<char*>(buffer), static_cast<int>(len), flags,
+        reinterpret_cast<struct sockaddr*>(&endpoint.addr), &endpoint.addr_len);
 
     if (n > 0) {
       return static_cast<size_t>(n);
@@ -91,8 +92,8 @@ void UdpSocket::send_to(const Packet& packet,
 
   ssize_t n{};
   do {
-    n = ::sendto(m_fd, data, size, flags,
-                 reinterpret_cast<const sockaddr*>(&endpoint.addr),
+    n = ::sendto(m_fd, static_cast<const char*>(data), static_cast<int>(size),
+                 flags, reinterpret_cast<const sockaddr*>(&endpoint.addr),
                  endpoint.addr_len);
   } while (n == -1 && LAST_ERROR == ERR_INTR);
 
@@ -117,7 +118,8 @@ size_t UdpSocket::recv_from(Packet& packet,
   ssize_t n{};
 
   do {
-    n = ::recvfrom(m_fd, packet.buffer(), packet.get_size(), flags,
+    n = ::recvfrom(m_fd, reinterpret_cast<char*>(packet.buffer()),
+                   static_cast<int>(packet.get_size()), flags,
                    reinterpret_cast<struct sockaddr*>(&endpoint.addr),
                    &endpoint.addr_len);
   } while (n == -1 && LAST_ERROR == ERR_INTR);
