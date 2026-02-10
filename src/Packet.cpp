@@ -1,5 +1,4 @@
 #include <cppcon/Packet.h>
-#include <netinet/in.h>
 
 #include <cstring>
 
@@ -23,9 +22,7 @@ Packet& Packet::operator<<(const std::string& data) {
   std::uint32_t len = static_cast<std::uint32_t>(data.size());
   *this << len;
 
-  for (char c : data) {
-    m_data.push_back(static_cast<std::uint8_t>(c));
-  }
+  m_data.insert(m_data.end(), data.begin(), data.end());
 
   return *this;
 }

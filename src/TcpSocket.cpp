@@ -1,33 +1,48 @@
 #include <cppcon/AddrInfoResolver.h>
 #include <cppcon/TcpSocket.h>
-#include <endian.h>
 
 #include <cerrno>
-#include <stdexcept>
 #include <system_error>
+
+#ifdef _WIN32
+#define LAST_ERROR WSAGetLastError()
+#define ERR_INTR WSAEINTR
+#define ERR_AGAIN WSAEWOULDBLOCK
+#define ERR_WOULDBLOCK WSAEWOULDBLOCK
+#define ERR_INPROGRESS WSAEINPROGRESS
+// Define ssize_t for Windows
+using ssize_t = int;
+#else
+#include <endian.h>
+#define LAST_ERROR errno
+#define ERR_INTR EINTR
+#define ERR_AGAIN EAGAIN
+#define ERR_WOULDBLOCK EWOULDBLOCK
+#define ERR_INPROGRESS EINPROGRESS
+#endif
 
 TcpSocket::TcpSocket() : BaseSocket(AF_INET, SOCK_STREAM, 0) {}
 
 void TcpSocket::connect(const AddrInfoResolver::Endpoint& endpoint) {
-  if (m_fd == -1) {
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("connect() called on invalid/moved socket");
   }
 
   while (::connect(m_fd, reinterpret_cast<const sockaddr*>(&endpoint.addr),
                    endpoint.addr_len) < 0) {
-    if (errno == EINTR) {  // Retry if interrupted
+    if (LAST_ERROR == ERR_INTR) {  // Retry if interrupted
       continue;
     }
-    if (errno == EINPROGRESS) {  // Connection started
+    if (LAST_ERROR == ERR_INPROGRESS) {  // Connection started
       return;
     }
 
-    throw std::system_error(errno, std::system_category(), "connect()");
+    throw std::system_error(LAST_ERROR, std::system_category(), "connect()");
   }
 }
 
 void TcpSocket::send(const std::string& msg, int flags) {
-  if (m_fd == -1) {
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("send() called on invalid/moved socket");
   }
 
@@ -42,15 +57,15 @@ void TcpSocket::send(const std::string& msg, int flags) {
       sent += static_cast<size_t>(n);
     }
     else if (n == -1) {
-      if (errno == EINTR) {  // Retry if interrupted
+      if (LAST_ERROR == ERR_INTR) {  // Retry if interrupted
         continue;
       }
 
-      if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
         throw std::runtime_error("Socket would block");
       }
 
-      throw std::system_error(errno, std::system_category(), "send()");
+      throw std::system_error(LAST_ERROR, std::system_category(), "send()");
     }
     else {
       break;
@@ -59,12 +74,13 @@ void TcpSocket::send(const std::string& msg, int flags) {
 }
 
 size_t TcpSocket::recv(void* buffer, size_t len, int flags) {
-  if (m_fd == -1) {
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("recv() called on invalid/moved socket");
   }
 
   while (true) {
-    ssize_t n = ::recv(m_fd, buffer, len, flags);
+    ssize_t n =
+        ::recv(m_fd, static_cast<char*>(buffer), static_cast<int>(len), flags);
 
     if (n > 0) {
       return static_cast<size_t>(n);
@@ -73,13 +89,14 @@ size_t TcpSocket::recv(void* buffer, size_t len, int flags) {
       throw std::runtime_error("Connection closed by peer");
     }
     else {
-      if (errno == EINTR) {  // Inerrupted, try again
+      if (LAST_ERROR == ERR_INTR) {  // Inerrupted, try again
         continue;
       }
-      if (errno == EWOULDBLOCK || errno == EAGAIN) {  // If non-blocking
+      if (LAST_ERROR == ERR_WOULDBLOCK ||
+          LAST_ERROR == ERR_AGAIN) {  // If non-blocking
         throw std::runtime_error("No data available yet");
       }
-      throw std::system_error(errno, std::system_category(), "recv()");
+      throw std::system_error(LAST_ERROR, std::system_category(), "recv()");
     }
   }
 }
@@ -92,11 +109,11 @@ void TcpSocket::send_all(const void* data, size_t len, int flags) {
     ssize_t bytes = ::send(m_fd, start + total_sent, len - total_sent, flags);
 
     if (bytes == -1) {
-      if (errno == EINTR) continue;
-      if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      if (LAST_ERROR == ERR_INTR) continue;
+      if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
         throw std::runtime_error("Socket would block inside send_all");
       }
-      throw std::system_error(errno, std::system_category(), "send_all()");
+      throw std::system_error(LAST_ERROR, std::system_category(), "send_all()");
     }
     total_sent += bytes;
   }
@@ -123,11 +140,11 @@ bool TcpSocket::recv_all(void* buffer, size_t len, int flags) {
 
     if (bytes == 0) return false;  // Connection terminated
     if (bytes < 0) {
-      if (errno == EINTR) continue;
-      if (errno == EWOULDBLOCK || errno == EAGAIN) {
+      if (LAST_ERROR == ERR_INTR) continue;
+      if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
         throw std::runtime_error("Socket would block (incomplete packet)");
       }
-      throw std::system_error(errno, std::system_category(), "recv_all()");
+      throw std::system_error(LAST_ERROR, std::system_category(), "recv_all()");
     }
 
     total_received += bytes;

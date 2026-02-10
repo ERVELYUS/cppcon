@@ -10,17 +10,23 @@ std::vector<AddrInfoResolver::Endpoint> AddrInfoResolver::resolve(
   std::vector<Endpoint> results;
 
   struct addrinfo hints{};
+  std::memset(&hints, 0, sizeof(hints));
   hints.ai_family = family;
   hints.ai_socktype = socktype;
-  hints.ai_family = family;
+  hints.ai_protocol = 0;
   hints.ai_flags = flags;
 
   struct addrinfo* res = nullptr;
   int status = getaddrinfo(host.empty() ? nullptr : host.data(), port.data(),
                            &hints, &res);
   if (status != 0) {
+#ifdef _WIN32
+    throw std::runtime_error("getaddrinfo failed with error: " +
+                             std::to_string(status));
+#else
     throw std::runtime_error(std::string("getaddrinfo: ") +
                              gai_strerror(status));
+#endif
   }
 
   struct AddrInfoDeleter {

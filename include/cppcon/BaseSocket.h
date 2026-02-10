@@ -1,17 +1,37 @@
 #pragma once
+
 #include <cppcon/AddrInfoResolver.h>
+
+#ifdef _WIN32
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#else
+#include <arpa/inet.h>
 #include <fcntl.h>
+#include <netdb.h>  // For addrinfo
+#include <poll.h>
 #include <sys/socket.h>
-#include <unistd.h>
+#include <unistd.h>  // For close()
+#endif
 
 #include <stdexcept>
 
+#ifdef _WIN32
+using socket_t = SOCKET;
+using socklen_t = int;
+#define IS_INVALID(s) (s == INVALID_SOCKET)
+#else
+using socket_t = int;
+#define IS_INVALID(s) (s < 0)
+#define INVALID_SOCKET -1
+#endif
+
 class BaseSocket {
  protected:
-  int m_fd = -1;
+  socket_t m_fd = INVALID_SOCKET;
 
   BaseSocket(int family, int type, int protocol);
-  explicit BaseSocket(int fd) : m_fd(fd) {}
+  explicit BaseSocket(socket_t fd) : m_fd(fd) {}
 
  public:
   void close();
@@ -24,14 +44,16 @@ class BaseSocket {
   BaseSocket& operator=(BaseSocket&& other) noexcept;
 
   void set_non_blocking(bool non_blocking);
-  int get_fd() const;
+  socket_t get_fd() const;
 
   template <typename T>
   void set_option(int level, int option_name, T option_value) {
-    if (m_fd == -1)
+    if (IS_INVALID(m_fd))
       throw std::logic_error("set_option() called on invalid/moved socket");
 
-    if (setsockopt(m_fd, level, option_name, &option_value, sizeof(T)) < 0) {
+    const char* opt_ptr = reinterpret_cast<const char*>(&option_value);
+    if (setsockopt(m_fd, level, option_name, opt_ptr,
+                   static_cast<socklen_t>(sizeof(T))) < 0) {
       throw std::runtime_error("setsockopt failed");
     }
   }

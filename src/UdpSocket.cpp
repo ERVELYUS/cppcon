@@ -4,10 +4,23 @@
 #include <stdexcept>
 #include <system_error>
 
+#ifdef _WIN32
+#define LAST_ERROR WSAGetLastError()
+#define ERR_INTR WSAEINTR
+#define ERR_AGAIN WSAEWOULDBLOCK
+#define ERR_WOULDBLOCK WSAEWOULDBLOCK
+using ssize_t = int;
+#else
+#define LAST_ERROR errno
+#define ERR_INTR EINTR
+#define ERR_AGAIN EAGAIN
+#define ERR_WOULDBLOCK EWOULDBLOCK
+#endif
+
 UdpSocket::UdpSocket() : BaseSocket(AF_INET, SOCK_DGRAM, 0) {}
 
 void UdpSocket::bind(const AddrInfoResolver::Endpoint& endpoint) {
-  if (m_fd == -1) {
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("bind() called on invalid/moved socket");
   }
 
@@ -19,26 +32,26 @@ void UdpSocket::bind(const AddrInfoResolver::Endpoint& endpoint) {
 
 void UdpSocket::send_to(const std::string& msg,
                         const AddrInfoResolver::Endpoint& endpoint, int flags) {
-  if (m_fd == -1) throw std::logic_error("Invalid socket");
+  if (IS_INVALID(m_fd)) throw std::logic_error("Invalid socket");
 
   ssize_t n;
   do {
     n = ::sendto(m_fd, msg.data(), msg.size(), flags,
                  reinterpret_cast<const sockaddr*>(&endpoint.addr),
                  endpoint.addr_len);
-  } while (n == -1 && errno == EINTR);
+  } while (n == -1 && LAST_ERROR == ERR_INTR);
 
   if (n == -1) {
-    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+    if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
       throw std::runtime_error("UDP send buffer full");
     }
-    throw std::system_error(errno, std::system_category(), "sendto()");
+    throw std::system_error(LAST_ERROR, std::system_category(), "sendto()");
   }
 }
 
 size_t UdpSocket::recv_from(void* buffer, size_t len,
                             AddrInfoResolver::Endpoint& endpoint, int flags) {
-  if (m_fd == -1) {
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("recv_from() called on invalid/moved socket");
   }
 
@@ -55,20 +68,22 @@ size_t UdpSocket::recv_from(void* buffer, size_t len,
       throw std::runtime_error("Connection closed by peer");
     }
     else {
-      if (errno == EINTR) {  // Interrupted, try again
+      if (LAST_ERROR == ERR_INTR) {  // Interrupted, try again
         continue;
       }
-      if (errno == EWOULDBLOCK || errno == EAGAIN) {  // If non-blocking
+      if (LAST_ERROR == ERR_WOULDBLOCK ||
+          LAST_ERROR == ERR_AGAIN) {  // If non-blocking
         throw std::runtime_error("No data available yet");
       }
-      throw std::system_error(errno, std::system_category(), "recv_from()");
+      throw std::system_error(LAST_ERROR, std::system_category(),
+                              "recv_from()");
     }
   }
 }
 
 void UdpSocket::send_to(const Packet& packet,
                         const AddrInfoResolver::Endpoint& endpoint, int flags) {
-  if (m_fd == -1)
+  if (IS_INVALID(m_fd))
     throw std::logic_error("send_to() called on invalid/moved socket");
 
   const void* data = packet.get_data();
@@ -79,20 +94,21 @@ void UdpSocket::send_to(const Packet& packet,
     n = ::sendto(m_fd, data, size, flags,
                  reinterpret_cast<const sockaddr*>(&endpoint.addr),
                  endpoint.addr_len);
-  } while (n == -1 && errno == EINTR);
+  } while (n == -1 && LAST_ERROR == ERR_INTR);
 
   if (n == -1) {
-    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+    if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
       throw std::runtime_error("UDP send buffer full");
     }
-    throw std::system_error(errno, std::system_category(), "sendto()");
+    throw std::system_error(LAST_ERROR, std::system_category(), "sendto()");
   }
 }
 
 size_t UdpSocket::recv_from(Packet& packet,
                             AddrInfoResolver::Endpoint& endpoint, int flags) {
-  if (m_fd == -1)
+  if (IS_INVALID(m_fd)) {
     throw std::logic_error("recv_from() called on invalid/moved socket");
+  }
 
   constexpr std::uint16_t BIGGEST_POSSIBLE_PACKET{65535};
   packet.resize(BIGGEST_POSSIBLE_PACKET);
@@ -104,7 +120,7 @@ size_t UdpSocket::recv_from(Packet& packet,
     n = ::recvfrom(m_fd, packet.buffer(), packet.get_size(), flags,
                    reinterpret_cast<struct sockaddr*>(&endpoint.addr),
                    &endpoint.addr_len);
-  } while (n == -1 || errno == EINTR);
+  } while (n == -1 && LAST_ERROR == ERR_INTR);
 
   if (n > 0) {
     packet.resize(static_cast<size_t>(n));
@@ -115,9 +131,9 @@ size_t UdpSocket::recv_from(Packet& packet,
     return 0;
   }
   else {
-    if (errno == EWOULDBLOCK || errno == EAGAIN) {
+    if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
       throw std::runtime_error("No data available");
     }
-    throw std::system_error(errno, std::system_category(), "recvfrom()");
+    throw std::system_error(LAST_ERROR, std::system_category(), "recvfrom()");
   }
 }

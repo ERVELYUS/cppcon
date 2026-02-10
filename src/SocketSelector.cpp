@@ -1,16 +1,22 @@
 #include <cppcon/SocketSelector.h>
 
+#include <algorithm>
+
 void SocketSelector::add(const BaseSocket& socket, const short mode) {
   if (socket.get_fd() == -1) {
     throw std::logic_error(
         "SocketSelector: attempted to add invalid/moved socket");
   }
 
+#ifdef _WIN32
+  m_poll_fds.push_back({(SOCKET)socket.get_fd(), mode, 0});
+#else
   m_poll_fds.push_back({socket.get_fd(), mode, 0});
+#endif
 }
 
 void SocketSelector::remove(const BaseSocket& socket) {
-  int fd_to_remove = socket.get_fd();
+  socket_t fd_to_remove = socket.get_fd();
 
   m_poll_fds.erase(std::remove_if(m_poll_fds.begin(), m_poll_fds.end(),
                                   [fd_to_remove](const pollfd& pfd) {

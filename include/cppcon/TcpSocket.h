@@ -7,7 +7,7 @@
 
 class TcpSocket : public BaseSocket {
   friend class TcpListener;
-  explicit TcpSocket(int fd) : BaseSocket(fd) {}
+  explicit TcpSocket(socket_t fd) : BaseSocket(fd) {}
 
  public:
   TcpSocket();
