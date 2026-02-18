@@ -1,6 +1,7 @@
 #include <cppcon/SocketSelector.h>
 
 #include <algorithm>
+#include <vector>
 
 void SocketSelector::add(const BaseSocket& socket, const short mode) {
   if (IS_INVALID(socket.get_fd())) {
@@ -20,8 +21,8 @@ void SocketSelector::remove(const BaseSocket& socket) {
                    m_poll_fds.end());
 }
 
-void SocketSelector::wait(int timeout) {
-  if (m_poll_fds.empty()) return;
+std::vector<socket_t> SocketSelector::wait(int timeout) {
+  if (m_poll_fds.empty()) return {};
 
 #ifdef _WIN32
   ULONG nfds = static_cast<ULONG>(m_poll_fds.size());
@@ -29,17 +30,23 @@ void SocketSelector::wait(int timeout) {
   nfds_t nfds = static_cast<nfds_t>(m_poll_fds.size());
 #endif
 
-  if (::poll(m_poll_fds.data(), nfds, timeout) < 0) {
+  int count = ::poll(m_poll_fds.data(), nfds, timeout);
+
+  if (count < 0) {
     throw std::runtime_error("poll() failed");
   }
-}
+  else if (count == 0) {
+    return {};
+  }
 
-bool SocketSelector::is_ready(const BaseSocket& socket) {
-  socket_t target_fd = socket.get_fd();
+  std::vector<socket_t> ready_sockets;
+  ready_sockets.reserve(count);
+
   for (const auto& pfd : m_poll_fds) {
-    if (pfd.fd == target_fd) {
-      return (pfd.revents & (POLLIN | POLLOUT | POLLERR | POLLHUP));
+    if (pfd.revents & (POLLIN | POLLOUT | POLLERR | POLLHUP)) {
+      ready_sockets.push_back(pfd.fd);
     }
   }
-  return false;
+
+  return ready_sockets;
 }

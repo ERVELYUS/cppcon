@@ -1,11 +1,12 @@
 #pragma once
 
-#include "UniversalTypes.h"
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
 #include <string>
 #include <vector>
+
+#include "UniversalTypes.h"
 
 class Packet {
   std::vector<uint8_t> m_data{};

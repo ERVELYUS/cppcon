@@ -8,6 +8,5 @@ class SocketSelector {
  public:
   void add(const BaseSocket& socket, const short mode);
   void remove(const BaseSocket& socket);
-  void wait(int timeout = -1);
-  bool is_ready(const BaseSocket& socket);
+  std::vector<socket_t> wait(int timeout = -1);
 };

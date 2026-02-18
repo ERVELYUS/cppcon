@@ -1,8 +1,9 @@
 #pragma once
 
-#include "UniversalTypes.h"
 #include <string>
 #include <vector>
+
+#include "UniversalTypes.h"
 
 class AddrInfoResolver {
  public:
