@@ -24,16 +24,16 @@ class Packet {
   template <typename T>
   Packet& operator<<(T data) {
     T network_data = data;
+
     if constexpr (sizeof(T) == 2) {
-      network_data = htobe16(static_cast<std::uint16_t>(network_data));
+      network_data = htobe16(static_cast<uint16_t>(network_data));
     }
     else if constexpr (sizeof(T) == 4) {
-      network_data = htobe32(static_cast<std::uint32_t>(network_data));
+      network_data = htobe32(static_cast<uint32_t>(network_data));
     }
-    // TODO: Figure out a way to do that on windows
-    /* else if constexpr (sizeof(T) == 8) {
-      network_data = htobe64(static_cast<std::uint64_t>(network_data));
-    } */
+    else if constexpr (sizeof(T) == 8) {
+      network_data = htobe64(static_cast<uint64_t>(network_data));
+    }
 
     const std::uint8_t* bytes =
         reinterpret_cast<const std::uint8_t*>(&network_data);
@@ -52,14 +52,14 @@ class Packet {
     std::memcpy(&data, &m_data[m_read_pos], sizeof(T));
 
     if constexpr (sizeof(T) == 2) {
-      data = be16toh(static_cast<std::uint16_t>(data));
+      data = be16toh(static_cast<uint16_t>(data));
     }
     else if constexpr (sizeof(T) == 4) {
-      data = be32toh(static_cast<std::uint32_t>(data));
+      data = be32toh(static_cast<uint32_t>(data));
     }
-    /* else if constexpr (sizeof(T) == 8) {
-      data = be64toh(static_cast<std::uint64_t>(data));
-    } */
+    else if constexpr (sizeof(T) == 8) {
+      data = be64toh(static_cast<uint64_t>(data));
+    }
 
     m_read_pos += sizeof(T);
 
