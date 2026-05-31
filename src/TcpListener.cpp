@@ -2,13 +2,7 @@
 
 #include <system_error>
 
-#ifdef _WIN32
-#define LAST_ERROR WSAGetLastError()
-#define ERR_INTR WSAEINTR
-#else
-#define LAST_ERROR errno
-#define ERR_INTR EINTR
-#endif
+#include "SocketError.h"
 
 TcpListener::TcpListener() : BaseSocket(AF_INET, SOCK_STREAM, 0) {
   int opt = 1;
@@ -18,6 +12,12 @@ TcpListener::TcpListener() : BaseSocket(AF_INET, SOCK_STREAM, 0) {
 void TcpListener::bind(const AddrInfoResolver::Endpoint& endpoint) {
   if (IS_INVALID(m_fd)) {
     throw std::logic_error("bind() called on invalid/moved socket");
+  }
+
+  if (endpoint.family != m_family) {
+    reset_socket(endpoint.family);
+    int opt = 1;
+    set_option(SOL_SOCKET, SO_REUSEADDR, opt);
   }
 
   if (::bind(m_fd, reinterpret_cast<const sockaddr*>(&endpoint.addr),
@@ -48,7 +48,7 @@ TcpSocket TcpListener::accept() {
   do {
     client_fd = ::accept(m_fd, reinterpret_cast<struct sockaddr*>(&client_addr),
                          &addr_len);
-  } while (client_fd == -1 && LAST_ERROR == ERR_INTR);
+  } while (IS_INVALID(client_fd) && LAST_ERROR == ERR_INTR);
 
   if (IS_INVALID(client_fd)) {
     // FIX: Use std::system_error for cross-platform error strings

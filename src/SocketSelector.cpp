@@ -3,12 +3,21 @@
 #include <algorithm>
 #include <vector>
 
-void SocketSelector::add(const BaseSocket& socket, const short mode) {
+#include "SocketError.h"
+
+void SocketSelector::add(const BaseSocket& socket, short mode) {
   if (IS_INVALID(socket.get_fd())) {
     throw std::logic_error("SocketSelector: invalid socket");
   }
 
-  m_poll_fds.push_back({static_cast<socket_t>(socket.get_fd()), mode, 0});
+  socket_t fd = socket.get_fd();
+
+  // Prevent duplicate entries
+  for (const auto& pfd : m_poll_fds) {
+    if (pfd.fd == fd) return;
+  }
+
+  m_poll_fds.push_back({static_cast<socket_t>(fd), mode, 0});
 }
 
 void SocketSelector::remove(const BaseSocket& socket) {
@@ -21,7 +30,7 @@ void SocketSelector::remove(const BaseSocket& socket) {
                    m_poll_fds.end());
 }
 
-std::vector<socket_t> SocketSelector::wait(int timeout) {
+std::vector<std::pair<socket_t, short>> SocketSelector::wait(int timeout) {
   if (m_poll_fds.empty()) return {};
 
 #ifdef _WIN32
@@ -30,7 +39,10 @@ std::vector<socket_t> SocketSelector::wait(int timeout) {
   nfds_t nfds = static_cast<nfds_t>(m_poll_fds.size());
 #endif
 
-  int count = ::poll(m_poll_fds.data(), nfds, timeout);
+  int count;
+  do {
+    count = ::poll(m_poll_fds.data(), nfds, timeout);
+  } while (count < 0 && LAST_ERROR == ERR_INTR);
 
   if (count < 0) {
     throw std::runtime_error("poll() failed");
@@ -39,12 +51,12 @@ std::vector<socket_t> SocketSelector::wait(int timeout) {
     return {};
   }
 
-  std::vector<socket_t> ready_sockets;
+  std::vector<std::pair<socket_t, short>> ready_sockets;
   ready_sockets.reserve(count);
 
   for (const auto& pfd : m_poll_fds) {
-    if (pfd.revents & (POLLIN | POLLOUT | POLLERR | POLLHUP)) {
-      ready_sockets.push_back(pfd.fd);
+    if (pfd.revents != 0) {
+      ready_sockets.emplace_back(pfd.fd, pfd.revents);
     }
   }
 
