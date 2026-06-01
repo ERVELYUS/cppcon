@@ -10,7 +10,6 @@ std::vector<AddrInfoResolver::Endpoint> AddrInfoResolver::resolve(
   std::vector<Endpoint> results;
 
   struct addrinfo hints{};
-  std::memset(&hints, 0, sizeof(hints));
   hints.ai_family = family;
   hints.ai_socktype = socktype;
   hints.ai_protocol = 0;

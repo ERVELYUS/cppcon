@@ -19,7 +19,11 @@ class TcpSocket : public BaseSocket {
   void send(const Packet& packet, int flags = 0);
   bool recv(Packet& packet, int flags = 0);
 
+  void set_max_packet_size(std::uint32_t max_bytes);
+
  private:
+  std::uint32_t m_max_packet_size{64u * 1024u * 1024u};
+
   void send_all(const void* buffer, size_t len, int flags);
   bool recv_all(void* buffer, size_t size, int flags);
 };

@@ -5,7 +5,8 @@
 struct WSAInit {
   WSAInit() {
     WSADATA wsaData;
-    WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0)
+      throw std::runtime_error("WSAStartup failed");
   }
   ~WSAInit() { WSACleanup(); }
 };
@@ -14,9 +15,21 @@ static WSAInit wsa_init_instance;
 #endif
 
 BaseSocket::BaseSocket(int family, int type, int protocol)
-    : m_fd(::socket(family, type, protocol)) {
+    : m_fd(::socket(family, type, protocol)),
+      m_family(family),
+      m_socktype(type),
+      m_protocol(protocol) {
   if (IS_INVALID(m_fd)) {
     throw std::runtime_error("Failed to create a socket");
+  }
+}
+
+void BaseSocket::reset_socket(int new_family) {
+  close();
+  m_family = new_family;
+  m_fd = ::socket(new_family, m_socktype, m_protocol);
+  if (IS_INVALID(m_fd)) {
+    throw std::runtime_error("Failed to recreate socket");
   }
 }
 

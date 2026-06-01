@@ -7,9 +7,14 @@
 class BaseSocket {
  protected:
   socket_t m_fd = INVALID_SOCKET;
+  int m_family{};
+  int m_socktype{};
+  int m_protocol{};
 
   BaseSocket(int family, int type, int protocol);
   explicit BaseSocket(socket_t fd) : m_fd(fd) {}
+
+  void reset_socket(int new_family);
 
  public:
   void close();

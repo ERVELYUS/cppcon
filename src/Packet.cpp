@@ -31,7 +31,7 @@ Packet& Packet::operator>>(std::string& data) {
   std::uint32_t len = 0;
   *this >> len;
 
-  if (m_read_pos + len > m_data.size()) {
+  if (m_read_pos + static_cast<size_t>(len) > m_data.size()) {
     throw std::runtime_error("Packet: String length exceeds buffer size");
   }
 

@@ -1,31 +1,19 @@
 #include <cppcon/AddrInfoResolver.h>
 #include <cppcon/TcpSocket.h>
 
-#include <cerrno>
 #include <system_error>
 
-#ifdef _WIN32
-#define LAST_ERROR WSAGetLastError()
-#define ERR_INTR WSAEINTR
-#define ERR_AGAIN WSAEWOULDBLOCK
-#define ERR_WOULDBLOCK WSAEWOULDBLOCK
-#define ERR_INPROGRESS WSAEINPROGRESS
-// Define ssize_t for Windows
-using ssize_t = int;
-#else
-#include <endian.h>
-#define LAST_ERROR errno
-#define ERR_INTR EINTR
-#define ERR_AGAIN EAGAIN
-#define ERR_WOULDBLOCK EWOULDBLOCK
-#define ERR_INPROGRESS EINPROGRESS
-#endif
+#include "SocketError.h"
 
 TcpSocket::TcpSocket() : BaseSocket(AF_INET, SOCK_STREAM, 0) {}
 
 void TcpSocket::connect(const AddrInfoResolver::Endpoint& endpoint) {
   if (IS_INVALID(m_fd)) {
     throw std::logic_error("connect() called on invalid/moved socket");
+  }
+
+  if (endpoint.family != m_family) {
+    reset_socket(endpoint.family);
   }
 
   while (::connect(m_fd, reinterpret_cast<const sockaddr*>(&endpoint.addr),
@@ -36,7 +24,6 @@ void TcpSocket::connect(const AddrInfoResolver::Endpoint& endpoint) {
     if (LAST_ERROR == ERR_INPROGRESS) {  // Connection started
       return;
     }
-
     throw std::system_error(LAST_ERROR, std::system_category(), "connect()");
   }
 }
@@ -45,33 +32,7 @@ void TcpSocket::send(const std::string& msg, int flags) {
   if (IS_INVALID(m_fd)) {
     throw std::logic_error("send() called on invalid/moved socket");
   }
-
-  const char* data = msg.data();
-  size_t total = msg.size();
-  size_t sent{0};
-
-  while (sent < total) {
-    ssize_t n =
-        ::send(m_fd, data + sent, static_cast<int>(total - sent), flags);
-
-    if (n > 0) {
-      sent += static_cast<size_t>(n);
-    }
-    else if (n == -1) {
-      if (LAST_ERROR == ERR_INTR) {  // Retry if interrupted
-        continue;
-      }
-
-      if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
-        throw std::runtime_error("Socket would block");
-      }
-
-      throw std::system_error(LAST_ERROR, std::system_category(), "send()");
-    }
-    else {
-      break;
-    }
-  }
+  send_all(msg.data(), msg.size(), flags);
 }
 
 size_t TcpSocket::recv(void* buffer, size_t len, int flags) {
@@ -90,11 +51,10 @@ size_t TcpSocket::recv(void* buffer, size_t len, int flags) {
       throw std::runtime_error("Connection closed by peer");
     }
     else {
-      if (LAST_ERROR == ERR_INTR) {  // Inerrupted, try again
+      if (LAST_ERROR == ERR_INTR) {  // Interrupted, try again
         continue;
       }
-      if (LAST_ERROR == ERR_WOULDBLOCK ||
-          LAST_ERROR == ERR_AGAIN) {  // If non-blocking
+      if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {  // If non-blocking
         throw std::runtime_error("No data available yet");
       }
       throw std::system_error(LAST_ERROR, std::system_category(), "recv()");
@@ -110,14 +70,19 @@ void TcpSocket::send_all(const void* data, size_t len, int flags) {
     ssize_t bytes = ::send(m_fd, start + total_sent,
                            static_cast<int>(len - total_sent), flags);
 
-    if (bytes == -1) {
+    if (bytes > 0) {
+      total_sent += static_cast<size_t>(bytes);
+    }
+    else if (bytes == 0) {
+      throw std::runtime_error("Connection closed during send");
+    }
+    else {
       if (LAST_ERROR == ERR_INTR) continue;
       if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
         throw std::runtime_error("Socket would block inside send_all");
       }
       throw std::system_error(LAST_ERROR, std::system_category(), "send_all()");
     }
-    total_sent += bytes;
   }
 }
 
@@ -149,7 +114,7 @@ bool TcpSocket::recv_all(void* buffer, size_t len, int flags) {
       throw std::system_error(LAST_ERROR, std::system_category(), "recv_all()");
     }
 
-    total_received += bytes;
+    total_received += static_cast<size_t>(bytes);
   }
 
   return true;
@@ -166,8 +131,8 @@ bool TcpSocket::recv(Packet& packet, int flags) {
 
   // Terminate if payload is too big
   std::uint32_t payload_size = be32toh(network_size);
-  if (payload_size > 100 * 1024 * 1024) {
-    throw std::runtime_error("Packet size too large");
+  if (payload_size > m_max_packet_size) {
+    throw std::runtime_error("Packet size exceeds limit");
   }
 
   // Resize packet and receive the rest of payload
@@ -179,4 +144,8 @@ bool TcpSocket::recv(Packet& packet, int flags) {
   }
 
   return true;
+}
+
+void TcpSocket::set_max_packet_size(std::uint32_t max_bytes) {
+  m_max_packet_size = max_bytes;
 }

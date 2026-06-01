@@ -23,20 +23,28 @@ class Packet {
 
   template <typename T>
   Packet& operator<<(T data) {
-    T network_data = data;
+    std::uint8_t bytes[sizeof(T)];
+    std::memcpy(bytes, &data, sizeof(T));
 
     if constexpr (sizeof(T) == 2) {
-      network_data = htobe16(static_cast<uint16_t>(network_data));
+      std::uint16_t raw;
+      std::memcpy(&raw, bytes, 2);
+      raw = htobe16(raw);
+      std::memcpy(bytes, &raw, 2);
     }
     else if constexpr (sizeof(T) == 4) {
-      network_data = htobe32(static_cast<uint32_t>(network_data));
+      std::uint32_t raw;
+      std::memcpy(&raw, bytes, 4);
+      raw = htobe32(raw);
+      std::memcpy(bytes, &raw, 4);
     }
     else if constexpr (sizeof(T) == 8) {
-      network_data = htobe64(static_cast<uint64_t>(network_data));
+      std::uint64_t raw;
+      std::memcpy(&raw, bytes, 8);
+      raw = htobe64(raw);
+      std::memcpy(bytes, &raw, 8);
     }
 
-    const std::uint8_t* bytes =
-        reinterpret_cast<const std::uint8_t*>(&network_data);
     append(bytes, sizeof(T));
     return *this;
   }
@@ -49,16 +57,28 @@ class Packet {
       throw std::runtime_error("Packet: Not enough data to read");
     }
 
-    std::memcpy(&data, &m_data[m_read_pos], sizeof(T));
+    const std::uint8_t* src = &m_data[m_read_pos];
 
     if constexpr (sizeof(T) == 2) {
-      data = be16toh(static_cast<uint16_t>(data));
+      std::uint16_t raw;
+      std::memcpy(&raw, src, 2);
+      raw = be16toh(raw);
+      std::memcpy(&data, &raw, 2);
     }
     else if constexpr (sizeof(T) == 4) {
-      data = be32toh(static_cast<uint32_t>(data));
+      std::uint32_t raw;
+      std::memcpy(&raw, src, 4);
+      raw = be32toh(raw);
+      std::memcpy(&data, &raw, 4);
     }
     else if constexpr (sizeof(T) == 8) {
-      data = be64toh(static_cast<uint64_t>(data));
+      std::uint64_t raw;
+      std::memcpy(&raw, src, 8);
+      raw = be64toh(raw);
+      std::memcpy(&data, &raw, 8);
+    }
+    else {
+      std::memcpy(&data, src, sizeof(T));
     }
 
     m_read_pos += sizeof(T);

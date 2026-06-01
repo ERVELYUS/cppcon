@@ -1,27 +1,19 @@
 #include <cppcon/UdpSocket.h>
 
-#include <cerrno>
 #include <stdexcept>
 #include <system_error>
 
-#ifdef _WIN32
-#define LAST_ERROR WSAGetLastError()
-#define ERR_INTR WSAEINTR
-#define ERR_AGAIN WSAEWOULDBLOCK
-#define ERR_WOULDBLOCK WSAEWOULDBLOCK
-using ssize_t = int;
-#else
-#define LAST_ERROR errno
-#define ERR_INTR EINTR
-#define ERR_AGAIN EAGAIN
-#define ERR_WOULDBLOCK EWOULDBLOCK
-#endif
+#include "SocketError.h"
 
 UdpSocket::UdpSocket() : BaseSocket(AF_INET, SOCK_DGRAM, 0) {}
 
 void UdpSocket::bind(const AddrInfoResolver::Endpoint& endpoint) {
   if (IS_INVALID(m_fd)) {
     throw std::logic_error("bind() called on invalid/moved socket");
+  }
+
+  if (endpoint.family != m_family) {
+    reset_socket(endpoint.family);
   }
 
   if (::bind(m_fd, reinterpret_cast<const sockaddr*>(&endpoint.addr),
@@ -62,11 +54,8 @@ size_t UdpSocket::recv_from(void* buffer, size_t len,
         m_fd, static_cast<char*>(buffer), static_cast<int>(len), flags,
         reinterpret_cast<struct sockaddr*>(&endpoint.addr), &endpoint.addr_len);
 
-    if (n > 0) {
-      return static_cast<size_t>(n);
-    }
-    else if (n == 0) {
-      throw std::runtime_error("Connection closed by peer");
+    if (n >= 0) {
+      return static_cast<size_t>(n);  // 0 = empty datagram, valid for UDP
     }
     else {
       if (LAST_ERROR == ERR_INTR) {  // Interrupted, try again
@@ -124,13 +113,9 @@ size_t UdpSocket::recv_from(Packet& packet,
                    &endpoint.addr_len);
   } while (n == -1 && LAST_ERROR == ERR_INTR);
 
-  if (n > 0) {
-    packet.resize(static_cast<size_t>(n));
+  if (n >= 0) {
+    packet.resize(static_cast<size_t>(n));  // 0 = empty datagram, valid for UDP
     return static_cast<size_t>(n);
-  }
-  else if (n == 0) {
-    packet.resize(0);
-    return 0;
   }
   else {
     if (LAST_ERROR == ERR_WOULDBLOCK || LAST_ERROR == ERR_AGAIN) {
